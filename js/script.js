@@ -2,13 +2,14 @@ import { apiKey } from './config.js';
 
 const service = {
     apiSource: 'https://api.kinopoisk.dev/v1.3/movie',
-    limit: 12
+    limit: 12,
+    page: 1
 }
 
 async function getFilm(config, headers) {
     showPreloader()
     try {
-        const response = await fetch(`${config.apiSource}?limit=${config.limit}`, {
+        const response = await fetch(`${config.apiSource}?limit=${config.limit}&page=${config.page}`, {
             headers: headers
         })
         
@@ -25,7 +26,7 @@ async function getFilm(config, headers) {
 async function getFilmParam(config, params, headers) {
     showPreloader()
     try {
-        const response = await fetch(`${config.apiSource}?limit=${config.limit}&${params.name}=${params.value}`, {
+        const response = await fetch(`${config.apiSource}?limit=${config.limit}&page=${config.page}&${params.name}=${params.value}`, {
             headers: headers
         });
         

@@ -38,8 +38,8 @@
     <main class="main">
         <section class="controls">
             <div class="container">
-                <h3>Найдите фильмы по годам</h3>
-                <div class="select is-primary">
+                <h2 class="title-h2 films__title-h2">Найдите фильмы по годам</h2>
+                <div class="select controls__select is-primary">
                     <select class="form-select" id="yearSelect" name="year">
                         <option value="all">Все</option>
                         <option value="1990-1999">90-e</option>
@@ -54,6 +54,11 @@
             <div class="container">
                 <h2 class="title-h2 films__title-h2">Популярные фильмы</h2>
                 <div class="row"></div>
+                <ul class="pagination films__pagination justify-content-center" aria-label="Page navigation">
+                    <li class="page-item"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                </ul>
             </div>
         </section>
     </main>
