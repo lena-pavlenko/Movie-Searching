@@ -1,9 +1,14 @@
 import { apiKey } from './config.js';
 
-async function getFilm(url, headers) {
+const service = {
+    apiSource: 'https://api.kinopoisk.dev/v1.3/movie',
+    limit: 12
+}
+
+async function getFilm(config, headers) {
     showPreloader()
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`${config.apiSource}?limit=${config.limit}`, {
             headers: headers
         })
         
@@ -17,11 +22,10 @@ async function getFilm(url, headers) {
     }
    
 }
-async function getFilmParam(params, headers) {
+async function getFilmParam(config, params, headers) {
     showPreloader()
     try {
-        const apiSource = 'https://api.kinopoisk.dev/v1.3/movie'
-        const response = await fetch(`${apiSource}?limit=${params.limit}&${params.name}=${params.value}`, {
+        const response = await fetch(`${config.apiSource}?limit=${config.limit}&${params.name}=${params.value}`, {
             headers: headers
         });
         
@@ -82,11 +86,10 @@ function selectHandler() {
     const params = {
         value: select.value,
         name: select.name,
-        limit: 12
     }
 
     if (params.value === 'all') {
-        getFilm('https://api.kinopoisk.dev/v1.3/movie', {
+        getFilm(service, {
         'X-API-KEY': apiKey
     })
         .then(data => {
@@ -103,7 +106,7 @@ function selectHandler() {
             showAlarmMessage()
         })
     } else {
-        getFilmParam(params, {
+        getFilmParam(service, params, {
             'X-API-KEY': apiKey
         })
             .then(data => {
@@ -127,7 +130,7 @@ function searchHandler(e) {
     
     const valueGenre = inputGenre.value
 
-    getFilmParam('genres.name', valueGenre, {
+    getFilmParam(service, 'genres.name', valueGenre, {
         'X-API-KEY': apiKey
     })
         .then(data => {
@@ -183,7 +186,7 @@ function removeAlarmMessage() {
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    getFilm('https://api.kinopoisk.dev/v1.3/movie', {
+    getFilm(service, {
         'X-API-KEY': apiKey
     })
         .then(data => {
