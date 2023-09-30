@@ -52,3 +52,8 @@ body{
     margin: 0 5px;
     color: var(--bs-pagination-color);
 }
+
+.page-item.active,
+.page-item.active a{
+    pointer-events: none;
+}

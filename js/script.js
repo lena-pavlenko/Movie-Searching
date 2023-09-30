@@ -2,35 +2,32 @@ import { apiKey } from './config.js';
 
 const service = {
     apiSource: 'https://api.kinopoisk.dev/v1.3/movie',
-    limit: 12,
-    page: 1
+    limit: 20,
+    page: 1,
 }
 
-async function getFilm(config, headers) {
+const params = {}
+
+async function getFilm() {
     showPreloader()
+    let paramsStr = ''
     try {
-        const response = await fetch(`${config.apiSource}?limit=${config.limit}&page=${config.page}`, {
-            headers: headers
+        const keys = Object.keys(params)
+        if (keys.length > 0) {
+            keys.forEach(key => {
+                if (params[key].name && params[key].value) {
+                    paramsStr += `&${params[key].name}=${params[key].value}`
+                }
+            })
+        }
+        const response = await fetch(`${service.apiSource}?limit=${service.limit}&page=${service.page}${paramsStr}`, {
+            headers: {
+                'X-API-KEY': apiKey
+            }
         })
         
         const data = await response.json()
         console.log(data);
-        return data
-
-    } catch (error) {
-        console.log(error);
-        throw error // или return Promise.reject()
-    }
-   
-}
-async function getFilmParam(config, params, headers) {
-    showPreloader()
-    try {
-        const response = await fetch(`${config.apiSource}?limit=${config.limit}&page=${config.page}&${params.name}=${params.value}`, {
-            headers: headers
-        });
-        
-        const data = await response.json()
         return data
 
     } catch (error) {
@@ -70,10 +67,11 @@ function renderTemplate(film) {
         <div class="col-sm-12 col-md-6 col-lg-3 mb-2">
             <div class="card">
                 <div class="card__image">
-                    <img src="${film.poster.url || ''}" class="card-img-top" alt="${film.name || ''}">
+                    <img src="${film.poster?.url || 'https://climate.onep.go.th/wp-content/uploads/2020/01/default-image.jpg'}" class="card-img-top" 
+                    alt="${film.name || film.alternativeName || ''}">
                 </div>
                 <div class="card-body">
-                    <h4 class="card-title">${film.name || ''}</h4>
+                    <h4 class="card-title">${film.name || film.alternativeName || ''}</h4>
                     <p class="card-text fw-medium">${renderGenres(film.genres)}</p>
                     <p class="card-text">${film.shortDescription || ''}</p>
                 </div>
@@ -85,16 +83,17 @@ function renderTemplate(film) {
 }
 
 function selectHandler() {
-    const params = {
-        value: select.value,
+    params.select = {
         name: select.name,
+        value: select.value
     }
+    service.page = 1
 
-    if (params.value === 'all') {
-        getFilm(service, {
-        'X-API-KEY': apiKey
-    })
+    if (select.value === 'all') {
+        params.select = {}
+        getFilm()
         .then(data => {
+            renderPages(data.pages, service.page )
             if (!data.docs.length) {
                 showAlarmMessage()
                 return
@@ -108,10 +107,9 @@ function selectHandler() {
             showAlarmMessage()
         })
     } else {
-        getFilmParam(service, params, {
-            'X-API-KEY': apiKey
-        })
+        getFilm()
             .then(data => {
+                renderPages(data.pages, service.page)
                 if (!data.docs.length) {
                     showAlarmMessage()
                     return
@@ -129,13 +127,15 @@ function selectHandler() {
 
 function searchHandler(e) {
     e.preventDefault();
-    
-    const valueGenre = inputGenre.value
+    params.search = {
+        name: 'genres.name',
+        value: inputGenre.value
+    }
+    service.page = 1
 
-    getFilmParam(service, 'genres.name', valueGenre, {
-        'X-API-KEY': apiKey
-    })
+    getFilm()
         .then(data => {
+            renderPages(data.pages, service.page)
             if (!data.docs.length) {
                 showAlarmMessage()
                 return
@@ -188,74 +188,163 @@ function removeAlarmMessage() {
 
 function paginationHandler(e) {
     e.preventDefault()
-    if (e.target.closest('.page-item')) {
-        console.log(1);
+    if (e.target.closest('.js-page-item')) {
+        document.querySelectorAll('.js-page-item').forEach((pageItem) => {
+            pageItem.classList.remove('active')
+            e.target.closest('.js-page-item').classList.add('active')
+            service.page = Number(e.target.closest('.js-page-item').textContent)
+        })
+
+        getFilm()
+            .then(data => {
+                renderPages(data.pages, service.page)
+                if (!data.docs.length) {
+                    showAlarmMessage()
+                    return
+                }
+                removePreloader()
+                removeAlarmMessage()
+                renderFilms(data.docs)
+            })
+            .catch(err => {
+                console.log(err)
+                showAlarmMessage()
+            })
+    }
+
+    if (e.target.closest('.page-item_next')) {
+        service.page++
+        getFilm()
+            .then(data => {
+                renderPages(data.pages, service.page)
+                if (!data.docs.length) {
+                    showAlarmMessage()
+                    return
+                }
+                removePreloader()
+                removeAlarmMessage()
+                renderFilms(data.docs)
+            })
+            .catch(err => {
+                console.log(err)
+                showAlarmMessage()
+            })
+    }
+
+    if (e.target.closest('.page-item_prev')) {
+        service.page--
+        getFilm()
+            .then(data => {
+                renderPages(data.pages, service.page)
+                if (!data.docs.length) {
+                    showAlarmMessage()
+                    return
+                }
+                removePreloader()
+                removeAlarmMessage()
+                renderFilms(data.docs)
+            })
+            .catch(err => {
+                console.log(err)
+                showAlarmMessage()
+            })
     }
 }
 
-function templatePagItem(number) {
-    return `<li class="page-item"><a class="page-link" href="#">${number}</a></li>`
-}
-
-function renderPages(pages, count) {
+function renderPages(pages, current) {
     paginationContainer.innerHTML = '';
 
-    if (pages > 1 && count < pages) {
-        for(let i = 1; i <= count; i++) {
-            paginationContainer.insertAdjacentHTML('beforeend', templatePagItem(i))
-        }
+    if (current <= 3) {
+        paginationContainer.insertAdjacentHTML('beforeend', `
+            <li class="page-item js-page-item ${current === 1 ? 'active' : ''}"><a class="page-link" href="#">1</a></li>
+            <li class="page-item js-page-item ${current === 2 ? 'active' : ''}"><a class="page-link" href="#">2</a></li>
+            <li class="page-item js-page-item ${current === 3 ? 'active' : ''}"><a class="page-link" href="#">3</a></li>
+        `)
+
         paginationContainer.insertAdjacentHTML('afterbegin', `
-            <li class="page-item">
+            <li class="page-item page-item_prev disabled">
                 <a class="page-link" href="#" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-            </a>
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
         `
         )
+
         paginationContainer.insertAdjacentHTML('beforeend', `
             <span class="gap-item">...</span>
-            <li class="page-item"><a class="page-link" href="#">${pages}</a></li>
-            <li class="page-item">
+            <li class="page-item js-page-item"><a class="page-link" href="#">${pages}</a></li>
+            <li class="page-item page-item_next">
                 <a class="page-link" href="#" aria-label="Next">
                     <span aria-hidden="true">&raquo;</span>
                 </a>
             </li>
         `
         )
-    } else {
-        paginationContainer.insertAdjacentHTML('beforeend', templatePagItem(1))
     }
 
-    
+    if (current > 3 && current < pages-3) {
+        paginationContainer.insertAdjacentHTML('beforeend', `
+            <li class="page-item js-page-item"><a class="page-link" href="#">1</a></li>
+            <span class="gap-item">...</span>
+            <li class="page-item js-page-item"><a class="page-link" href="#">${current-1}</a></li>
+            <li class="page-item js-page-item active"><a class="page-link" href="#">${current}</a></li>
+            <li class="page-item js-page-item"><a class="page-link" href="#">${current+1}</a></li>
+        `)
 
+        paginationContainer.insertAdjacentHTML('afterbegin', `
+            <li class="page-item page-item_prev">
+                <a class="page-link" href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        `
+        )
 
-    // for(let i = 1; i < pages; i++) {
-    //     if (i === 1) {
-    //         paginationContainer.insertAdjacentHTML('beforeend', templatePagItem(i))
-    //     }
-    // }
+        paginationContainer.insertAdjacentHTML('beforeend', `
+            <span class="gap-item">...</span>
+            <li class="page-item js-page-item"><a class="page-link" href="#">${pages}</a></li>
+            <li class="page-item page-item_next">
+                <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        `
+        )
+    }
 
-    // if (pages > 1) {
-    //     paginationContainer.innerHTML += 
-    //     `<li class="page-item">
-    //         <a class="page-link" href="#" aria-label="Previous">
-    //             <span aria-hidden="true">&laquo;</span>
-    //             <span class="sr-only">Previous</span>
-    //         </a>
-    //     </li>
-    //   `
-    // }
-    
+    if (current >= pages-3) {
+        paginationContainer.insertAdjacentHTML('beforeend', `
+            <li class="page-item js-page-item"><a class="page-link" href="#">1</a></li>
+        `)
+
+        paginationContainer.insertAdjacentHTML('afterbegin', `
+            <li class="page-item page-item_prev">
+                <a class="page-link" href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        `
+        )
+
+        paginationContainer.insertAdjacentHTML('beforeend', `
+            <span class="gap-item">...</span>
+            <li class="page-item js-page-item ${current === pages-2 ? 'active' : ''}"><a class="page-link" href="#">${pages-2}</a></li>
+            <li class="page-item js-page-item ${current === pages-1 ? 'active' : ''}"><a class="page-link" href="#">${pages-1}</a></li>
+            <li class="page-item js-page-item ${current === pages ? 'active' : ''}"><a class="page-link" href="#">${pages}</a></li>
+            <li class="page-item page-item_next disabled">
+                <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        `
+        )
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    
-    getFilm(service, {
-        'X-API-KEY': apiKey
-    })
+    getFilm()
         .then(data => {
-            const pages = data.pages
-            renderPages(pages, 5)
-            console.log(pages);
+            renderPages(data.pages, service.page)
             
             if (!data.docs.length) {
                 showAlarmMessage()
