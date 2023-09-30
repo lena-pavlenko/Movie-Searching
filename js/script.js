@@ -44,6 +44,7 @@ const select = document.getElementById('yearSelect')
 const container = document.querySelector('.container .row')
 const form = document.forms['searchGenre']
 const inputGenre = form.elements['search-genre']
+const paginationContainer = document.querySelector('.pagination')
 
 function renderFilms(movies) {
     container.innerHTML = ''
@@ -73,7 +74,7 @@ function renderTemplate(film) {
                 </div>
                 <div class="card-body">
                     <h4 class="card-title">${film.name || ''}</h4>
-                    <p class="card-text font-weight-bold">${renderGenres(film.genres)}</p>
+                    <p class="card-text fw-medium">${renderGenres(film.genres)}</p>
                     <p class="card-text">${film.shortDescription || ''}</p>
                 </div>
                 <div class="card-footer text-body-secondary">${film.year || ''}</div>
@@ -185,12 +186,77 @@ function removeAlarmMessage() {
     }
 }
 
+function paginationHandler(e) {
+    e.preventDefault()
+    if (e.target.closest('.page-item')) {
+        console.log(1);
+    }
+}
+
+function templatePagItem(number) {
+    return `<li class="page-item"><a class="page-link" href="#">${number}</a></li>`
+}
+
+function renderPages(pages, count) {
+    paginationContainer.innerHTML = '';
+
+    if (pages > 1 && count < pages) {
+        for(let i = 1; i <= count; i++) {
+            paginationContainer.insertAdjacentHTML('beforeend', templatePagItem(i))
+        }
+        paginationContainer.insertAdjacentHTML('afterbegin', `
+            <li class="page-item">
+                <a class="page-link" href="#" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        `
+        )
+        paginationContainer.insertAdjacentHTML('beforeend', `
+            <span class="gap-item">...</span>
+            <li class="page-item"><a class="page-link" href="#">${pages}</a></li>
+            <li class="page-item">
+                <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        `
+        )
+    } else {
+        paginationContainer.insertAdjacentHTML('beforeend', templatePagItem(1))
+    }
+
+    
+
+
+    // for(let i = 1; i < pages; i++) {
+    //     if (i === 1) {
+    //         paginationContainer.insertAdjacentHTML('beforeend', templatePagItem(i))
+    //     }
+    // }
+
+    // if (pages > 1) {
+    //     paginationContainer.innerHTML += 
+    //     `<li class="page-item">
+    //         <a class="page-link" href="#" aria-label="Previous">
+    //             <span aria-hidden="true">&laquo;</span>
+    //             <span class="sr-only">Previous</span>
+    //         </a>
+    //     </li>
+    //   `
+    // }
+    
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     
     getFilm(service, {
         'X-API-KEY': apiKey
     })
         .then(data => {
+            const pages = data.pages
+            renderPages(pages, 5)
+            console.log(pages);
+            
             if (!data.docs.length) {
                 showAlarmMessage()
                 return
@@ -214,4 +280,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     })
 
+    paginationContainer.addEventListener('click', paginationHandler)
 })

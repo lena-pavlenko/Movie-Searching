@@ -45,3 +45,10 @@ body{
 .controls__select{
     margin-top: 20px;
 }
+
+.gap-item{
+    display: flex;
+    align-items: flex-end;
+    margin: 0 5px;
+    color: var(--bs-pagination-color);
+}
