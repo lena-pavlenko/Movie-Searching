@@ -54,6 +54,8 @@ body{
 }
 
 .page-item.active,
-.page-item.active a{
+.page-item.active a, 
+.page-item.disabled,
+.page-item.disabled a{
     pointer-events: none;
 }
