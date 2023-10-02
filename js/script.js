@@ -1,5 +1,7 @@
 import { apiKey } from './config.js';
 
+import renderPages from './pagination.js';
+
 const service = {
     apiSource: 'https://api.kinopoisk.dev/v1.3/movie',
     limit: 20,
@@ -27,7 +29,6 @@ async function getFilm() {
         })
         
         const data = await response.json()
-        console.log(data);
         return data
 
     } catch (error) {
@@ -71,7 +72,7 @@ function renderTemplate(film) {
                     alt="${film.name || film.alternativeName || ''}">
                 </div>
                 <div class="card-body">
-                    <h4 class="card-title">${film.name || film.alternativeName || ''}</h4>
+                    <h4 class="card-title">${film.name || film.alternativeName || 'Данные отсутствуют'}</h4>
                     <p class="card-text fw-medium">${renderGenres(film.genres)}</p>
                     <p class="card-text">${film.shortDescription || ''}</p>
                 </div>
@@ -93,7 +94,7 @@ function selectHandler() {
         params.select = {}
         getFilm()
         .then(data => {
-            renderPages(data.pages, service.page )
+            renderPages(data.pages, service.page, paginationContainer)
             if (!data.docs.length) {
                 showAlarmMessage()
                 return
@@ -109,7 +110,7 @@ function selectHandler() {
     } else {
         getFilm()
             .then(data => {
-                renderPages(data.pages, service.page)
+                renderPages(data.pages, service.page, paginationContainer)
                 if (!data.docs.length) {
                     showAlarmMessage()
                     return
@@ -135,7 +136,7 @@ function searchHandler(e) {
 
     getFilm()
         .then(data => {
-            renderPages(data.pages, service.page)
+            renderPages(data.pages, service.page, paginationContainer)
             if (!data.docs.length) {
                 showAlarmMessage()
                 return
@@ -148,6 +149,72 @@ function searchHandler(e) {
             console.log(err)
             showAlarmMessage()
         })
+}
+
+function paginationHandler(e) {
+    e.preventDefault()
+    
+    if (e.target.closest('.js-page-item')) {
+        document.querySelectorAll('.js-page-item').forEach((pageItem) => {
+            pageItem.classList.remove('active')
+            e.target.closest('.js-page-item').classList.add('active')
+            service.page = Number(e.target.closest('.js-page-item').textContent)
+        })
+
+        getFilm()
+            .then(data => {
+                renderPages(data.pages, service.page, paginationContainer)
+                if (!data.docs.length) {
+                    showAlarmMessage()
+                    return
+                }
+                removePreloader()
+                removeAlarmMessage()
+                renderFilms(data.docs)
+            })
+            .catch(err => {
+                console.log(err)
+                showAlarmMessage()
+            })
+    }
+
+    if (e.target.closest('.page-item_next')) {
+        service.page++
+        getFilm()
+            .then(data => {
+                renderPages(data.pages, service.page, paginationContainer)
+                if (!data.docs.length) {
+                    showAlarmMessage()
+                    return
+                }
+                removePreloader()
+                removeAlarmMessage()
+                renderFilms(data.docs)
+            })
+            .catch(err => {
+                console.log(err)
+                showAlarmMessage()
+            })
+    }
+
+    if (e.target.closest('.page-item_prev')) {
+        service.page--
+        getFilm()
+            .then(data => {
+                renderPages(data.pages, service.page, paginationContainer)
+                if (!data.docs.length) {
+                    showAlarmMessage()
+                    return
+                }
+                removePreloader()
+                removeAlarmMessage()
+                renderFilms(data.docs)
+            })
+            .catch(err => {
+                console.log(err)
+                showAlarmMessage()
+            })
+    }
 }
 
 function showPreloader() {
@@ -186,158 +253,10 @@ function removeAlarmMessage() {
     }
 }
 
-function paginationHandler(e) {
-    e.preventDefault()
-    
-    if (e.target.closest('.js-page-item')) {
-        document.querySelectorAll('.js-page-item').forEach((pageItem) => {
-            pageItem.classList.remove('active')
-            e.target.closest('.js-page-item').classList.add('active')
-            service.page = Number(e.target.closest('.js-page-item').textContent)
-        })
-
-        getFilm()
-            .then(data => {
-                renderPages(data.pages, service.page)
-                if (!data.docs.length) {
-                    showAlarmMessage()
-                    return
-                }
-                removePreloader()
-                removeAlarmMessage()
-                renderFilms(data.docs)
-            })
-            .catch(err => {
-                console.log(err)
-                showAlarmMessage()
-            })
-    }
-
-    if (e.target.closest('.page-item_next')) {
-        service.page++
-        getFilm()
-            .then(data => {
-                renderPages(data.pages, service.page)
-                if (!data.docs.length) {
-                    showAlarmMessage()
-                    return
-                }
-                removePreloader()
-                removeAlarmMessage()
-                renderFilms(data.docs)
-            })
-            .catch(err => {
-                console.log(err)
-                showAlarmMessage()
-            })
-    }
-
-    if (e.target.closest('.page-item_prev')) {
-        service.page--
-        getFilm()
-            .then(data => {
-                renderPages(data.pages, service.page)
-                if (!data.docs.length) {
-                    showAlarmMessage()
-                    return
-                }
-                removePreloader()
-                removeAlarmMessage()
-                renderFilms(data.docs)
-            })
-            .catch(err => {
-                console.log(err)
-                showAlarmMessage()
-            })
-    }
-}
-
-function renderPrevArrow(isDisabled = true) {
-    return `
-        <li class="page-item page-item_prev ${isDisabled ? 'disabled' : ''}">
-            <a class="page-link" href="#" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-            </a>
-        </li>
-    `
-}
-
-function renderNextArrow(isDisabled = false) {
-    return `
-        <li class="page-item page-item_next ${isDisabled ? 'disabled' : ''}">
-            <a class="page-link" href="#" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-            </a>
-        </li>
-    `
-}
-
-function renderLastPage(pagesCount) {
-    return `
-        <span class="gap-item">...</span>
-        <li class="page-item js-page-item"><a class="page-link" href="#">${pagesCount}</a></li>
-    `
-}
-
-function renderButtons(index, stopValue, current) {
-    let buttonsHtml = ''
-    for (let i = index; i <= stopValue; i++) {
-        buttonsHtml += `<li class="page-item js-page-item ${current === i ? 'active' : ''}"><a class="page-link" href="#">${i}</a></li>`
-    }
-    return buttonsHtml
-}
-
-function renderGap() {
-    return `<span class="gap-item">...</span>`
-}
-
-function renderFirstPage() {
-    return `<li class="page-item js-page-item"><a class="page-link" href="#">1</a></li>`
-}
-
-function renderPages(pages, current) {
-    paginationContainer.innerHTML = '';
-    const count = 3
-
-    if (pages === 1) {
-        return
-    }
-
-    if (pages <= (count + 1) * 2) {
-        paginationContainer.insertAdjacentHTML('beforeend', renderButtons(1, pages, current))
-        
-    } else {
-
-        if (current <= count) {
-            paginationContainer.insertAdjacentHTML('beforeend', renderButtons(1, count, current))
-            paginationContainer.insertAdjacentHTML('afterbegin', renderPrevArrow())
-            paginationContainer.insertAdjacentHTML('beforeend', renderLastPage(pages))
-            paginationContainer.insertAdjacentHTML('beforeend', renderNextArrow())
-        }
-    
-        if (current > count && current <= pages - count) {
-            paginationContainer.insertAdjacentHTML('beforeend', renderFirstPage())
-            paginationContainer.insertAdjacentHTML('beforeend', renderGap())
-            paginationContainer.insertAdjacentHTML('beforeend', renderButtons(current - Math.floor(count / 2), current + Math.floor(count / 2), current))
-            paginationContainer.insertAdjacentHTML('afterbegin', renderPrevArrow(false))
-            paginationContainer.insertAdjacentHTML('beforeend', renderLastPage(pages))
-            paginationContainer.insertAdjacentHTML('beforeend', renderNextArrow())
-        }
-    
-        if (current > pages - count) {
-            paginationContainer.insertAdjacentHTML('beforeend', renderFirstPage())
-            paginationContainer.insertAdjacentHTML('afterbegin', renderPrevArrow(false))
-            paginationContainer.insertAdjacentHTML('beforeend', renderGap())
-            paginationContainer.insertAdjacentHTML('beforeend', renderButtons(pages - count + 1, pages, current))
-            paginationContainer.insertAdjacentHTML('beforeend', renderNextArrow(true))
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     getFilm()
         .then(data => {
-            renderPages(data.pages, service.page)
+            renderPages(data.pages, service.page, paginationContainer)
             
             if (!data.docs.length) {
                 showAlarmMessage()
